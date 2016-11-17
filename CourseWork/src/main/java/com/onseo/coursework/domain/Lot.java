@@ -29,4 +29,8 @@ public class Lot {
         this.timeForBid = timeForBid;
     }
 
+    @Override
+    public String toString() {
+        return "Lot{" + "id=" + id + ", timeForBid=" + timeForBid + '}';
+    }
 }
