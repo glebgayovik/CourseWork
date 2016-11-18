@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 public class Auction {
@@ -20,10 +21,17 @@ public class Auction {
     private List<Bot> bots = new LinkedList<>();
     private ExecutorService executorService;
     private boolean isAuctionRunning = false;
+    private Bid biggestBid;
 
     public Auction(String lotName, long time, long botsCount) {
         this.lot = new Lot(lotName, time);
         this.botsCount = botsCount;
+        this.biggestBid = new Bid() {
+            {
+                setBotId("initializer");
+                setAmount(10);
+            }
+        };
         fillBots();
         System.out.println("Auction was created with parameters:");
         System.out.println("Lot : " + lot.toString());
@@ -41,12 +49,23 @@ public class Auction {
                 auctionBot.setBidStrategy(new EasyStrategy());
                 auctionBot.setId("easy_" + i);
             }
+            auctionBot.setBehaviour(createBotBehaviour(auctionBot));
             bots.add(auctionBot);
         }
         System.out.println("Bots was created :");
         bots.forEach(b -> {
             System.out.println(b.toString());
         });
+    }
+
+    private ScheduledExecutorService createBotBehaviour(Bot bot) {
+        ScheduledExecutorService service = new ScheduledThreadPoolExecutor(1);
+        service.scheduleAtFixedRate(() -> {
+            biggestBid.setAmount(biggestBid.getAmount() + bot.getBidStrategy().makeBid(lot, 0, 10));
+            biggestBid.setBotId(bot.getId());
+
+        }, 0, 5, TimeUnit.MILLISECONDS);
+        return service;
     }
 
     public void start() {
@@ -87,6 +106,5 @@ public class Auction {
             bid.setBotId(b.getId());
             bidHistory.put(System.currentTimeMillis(), bid);
         });
-
     }
 }
