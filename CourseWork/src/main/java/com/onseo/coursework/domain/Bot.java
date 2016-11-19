@@ -1,11 +1,13 @@
 package com.onseo.coursework.domain;
 
 import com.onseo.coursework.strategy.BidStrategy;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class Bot {
 
     private String id;
     private BidStrategy bidStrategy;
+    private ScheduledExecutorService behaviour;
 
     public String getId() {
         return id;
@@ -21,6 +23,14 @@ public class Bot {
 
     public void setBidStrategy(BidStrategy bidStrategy) {
         this.bidStrategy = bidStrategy;
+    }
+
+    public ScheduledExecutorService getBehaviour() {
+        return behaviour;
+    }
+
+    public void setBehaviour(ScheduledExecutorService behaviour) {
+        this.behaviour = behaviour;
     }
 
     @Override
