@@ -5,13 +5,7 @@ import com.onseo.coursework.domain.Lot;
 public class AggressiveStrategy implements BidStrategy {
 
     @Override
-    public long makeBid(Lot lot, long currentStage, long regularBidAmount) {
-//        long bid = regularBidAmount;
-//        long timeForBid = lot.getTimeForBid();
-//        if (timeForBid * (2 / 3) < currentStage) {
-//            bid *= 2;
-//        }
-//        return bid;
+    public long makeBid(Lot lot, long ballance, long regularBidAmount) {
         return regularBidAmount;
     }
 

@@ -9,6 +9,6 @@ import com.onseo.coursework.domain.Lot;
 
 public interface BidStrategy {
 
-    long makeBid(Lot lot, long currentStage, long regularBidAmount);
+    long makeBid(Lot lot, long ballance, long regularBidAmount);
 
 }
