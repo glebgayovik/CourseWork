@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -20,10 +18,9 @@ public class Auction {
     private final Lot lot;
     private final long botsCount;
     private final Map<Long, Bid> bidHistory = new ConcurrentHashMap<>();
-    private List<Bot> bots = new LinkedList<>();
-    Lock lock = new ReentrantLock();
-//    private ExecutorService executorService;
-//    private boolean isAuctionRunning = false;
+    private final List<Bot> bots = new LinkedList<>();
+    private final Lock lock = new ReentrantLock();
+    private ScheduledExecutorService watcherService;
     private Bid biggestBid;
 
     private Bid retrieveBid() {
@@ -61,16 +58,19 @@ public class Auction {
     }
 
     public void start() {
+        Thread watcherThread = registryWatchers();
         try {
+            watcherThread.start();
             fillBots();
             System.out.println("Auction was created with parameters:");
             System.out.println("Lot : " + lot.toString());
             System.out.println("Bots count : " + botsCount);
             Thread.sleep(this.lot.getTimeForBid());
-        }catch (InterruptedException ex) {
+        } catch (InterruptedException ex) {
             System.out.println("Error durin processing thread " + ex.getMessage());
         } finally {
             stopAuction();
+            System.out.println("Winner bid is : " + biggestBid.toString());
         }
     }
 
@@ -100,56 +100,36 @@ public class Auction {
             Bid currentBid = retrieveBid();
             Bid newBid = new Bid();
             newBid.setAmount(biggestBid.getAmount() + bot.getBidStrategy().makeBid(lot, 0, 10));
-            biggestBid.setBotId(bot.getId());
+            newBid.setBotId(bot.getId());
+            bidHistory.put(System.currentTimeMillis(), newBid);
+            setBid(newBid);
 
         }, 1, 5, TimeUnit.MILLISECONDS);
         return service;
     }
 
-    private void stopAuction() {
-        bots.forEach(b -> {
-            b.getBehaviour().shutdownNow();
+    private Thread registryWatchers() {
+        return new Thread(() -> {
+            watcherService = new ScheduledThreadPoolExecutor(1);
+            watcherService.scheduleAtFixedRate(() -> {
+                System.out.println("Start make auction dump at : " + System.currentTimeMillis());
+                bidHistory.forEach((t, bid) -> {
+                    System.out.println(t + " : " + bid);
+                });
+            }, 5, 1000, TimeUnit.MILLISECONDS);
         });
-        System.out.println("Winner bid is : " + biggestBid.toString());
     }
 
-//    public void start() {
-//        isAuctionRunning = true;
-//        System.out.println("Auction was started:");
-//        executorService = Executors.newCachedThreadPool();
-//        executorService.execute(() -> {
-//            for (int i = 10; isAuctionRunning; i += 10) {
-//                processBots(i);
-//            }
-//        });
-//    }
-//
-//    public void stop() {
-//        System.out.println("Auction was finished:");
-//        isAuctionRunning = false;
-//        executorService.shutdown();
-//        bidHistory.forEach((t, bid) -> {
-//            System.out.println(t + " : " + bid);
-//        });
-//        System.out.println("THE WINNER : " + decideWinnerBid().toString());
-//    }
-//
-//    private Bid decideWinnerBid() {
-//        Long latestTs = bidHistory.keySet().stream().sorted((k1, k2) -> {
-//            return k2.compareTo(k1);
-//        }).findFirst().orElse(null);
-//        return latestTs != null ? bidHistory.get(latestTs) : null;
-//    }
-//
-//    private void processBots(int currentBid) {
-//        System.out.println("start process bot with bid : " + currentBid);
-//        bots.stream().forEach((b) -> {
-//            long madeBid = b.getBidStrategy().makeBid(lot, 1, currentBid);
-//            System.out.println("Bot " + b.getId() + "make bid " + madeBid);
-//            Bid bid = new Bid();
-//            bid.setAmount(madeBid);
-//            bid.setBotId(b.getId());
-//            bidHistory.put(System.currentTimeMillis(), bid);
-//        });
-//    }
+    private void stopAuction() {
+        try {
+            bots.forEach(b -> {
+                b.getBehaviour().shutdownNow();
+            });
+        } catch (Exception e) {
+            e.getMessage();
+        } finally {
+            System.out.println("auction stoped at " + System.currentTimeMillis());
+            watcherService.shutdownNow();
+        }
+    }
 }
