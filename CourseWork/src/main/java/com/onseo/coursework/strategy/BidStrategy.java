@@ -9,6 +9,7 @@ import com.onseo.coursework.domain.Lot;
 
 public interface BidStrategy {
 
+    //TODO:Dif behavior
     long makeBid(Lot lot, long ballance, long regularBidAmount);
 
 }

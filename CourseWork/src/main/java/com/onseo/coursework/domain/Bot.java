@@ -7,6 +7,7 @@ public class Bot {
 
     private String id;
     private BidStrategy bidStrategy;
+    private Long balance;
     private ScheduledExecutorService behaviour;
 
     public String getId() {
@@ -33,9 +34,17 @@ public class Bot {
         this.behaviour = behaviour;
     }
 
+    public Long getBalance() {
+        return balance;
+    }
+
+    public void setBalance(Long balance) {
+        this.balance = balance;
+    }
+
     @Override
     public String toString() {
-        return "Bot{" + "id=" + id + ", bidStrategy=" + bidStrategy + '}';
+        return "Bot{" + "id=" + id + ", bidStrategy=" + bidStrategy + ", balance=" + balance + ", behaviour=" + behaviour + '}';
     }
 
 }

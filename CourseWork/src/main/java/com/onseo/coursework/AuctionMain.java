@@ -6,7 +6,10 @@ public class AuctionMain {
 
     public static void main(String[] args) {
         final int ttl = 10000;
-        Auction auction = new Auction("lot_1", ttl, 10);
+        int regularBid = 10;
+        int botsCount = 10;
+        final Long botBalance = 1000000L;
+        Auction auction = new Auction("lot_1", ttl, botsCount, botBalance, regularBid);
         auction.start();
     }
 }

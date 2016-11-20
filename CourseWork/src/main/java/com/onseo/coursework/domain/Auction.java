@@ -21,7 +21,10 @@ public class Auction {
     private final List<Bot> bots = new LinkedList<>();
     private final Lock lock = new ReentrantLock();
     private ScheduledExecutorService watcherService;
+    private long startTime;
     private Bid biggestBid;
+    private long botBalance;
+    private long regularBid;
 
     private Bid retrieveBid() {
         lock.lock();
@@ -46,21 +49,22 @@ public class Auction {
         }
     }
 
-    public Auction(String lotName, long time, long botsCount) {
+    public Auction(String lotName, long time, long botsCount, long botBalance, long regularBid) {
         this.lot = new Lot(lotName, time);
         this.botsCount = botsCount;
+        this.botBalance = botBalance;
+        this.regularBid = regularBid;
         this.biggestBid = new Bid() {
             {
                 setBotId("initializer");
-                setAmount(10);
+                setAmount(10L);
             }
         };
     }
 
     public void start() {
-        Thread watcherThread = registryWatchers();
         try {
-            watcherThread.start();
+            startTime = System.currentTimeMillis();
             fillBots();
             System.out.println("Auction was created with parameters:");
             System.out.println("Lot : " + lot.toString());
@@ -85,39 +89,53 @@ public class Auction {
                 auctionBot.setBidStrategy(new EasyStrategy());
                 auctionBot.setId("easy_" + i);
             }
+            auctionBot.setBalance(botBalance);
             auctionBot.setBehaviour(createBotBehaviour(auctionBot));
             bots.add(auctionBot);
         }
-        System.out.println("Bots was created :");
-        bots.forEach(b -> {
-            System.out.println(b.toString());
-        });
+        registryWatchers();
     }
 
     private ScheduledExecutorService createBotBehaviour(Bot bot) {
         ScheduledExecutorService service = new ScheduledThreadPoolExecutor(1);
         service.scheduleAtFixedRate(() -> {
             Bid currentBid = retrieveBid();
-            Bid newBid = new Bid();
-            newBid.setAmount(biggestBid.getAmount() + bot.getBidStrategy().makeBid(lot, 0, 10));
-            newBid.setBotId(bot.getId());
-            bidHistory.put(System.currentTimeMillis(), newBid);
-            setBid(newBid);
-
+            if (bot.getBalance() > currentBid.getAmount()) {
+                makeBid(bot);
+            } else {
+                service.shutdown();
+                bots.remove(bot);
+            }
         }, 1, 5, TimeUnit.MILLISECONDS);
         return service;
     }
 
-    private Thread registryWatchers() {
-        return new Thread(() -> {
-            watcherService = new ScheduledThreadPoolExecutor(1);
-            watcherService.scheduleAtFixedRate(() -> {
-                System.out.println("Start make auction dump at : " + System.currentTimeMillis());
-                bidHistory.forEach((t, bid) -> {
-                    System.out.println(t + " : " + bid);
-                });
-            }, 5, 1000, TimeUnit.MILLISECONDS);
-        });
+    private void makeBid(Bot bot) {
+        Bid newBid = new Bid();
+        final long newAmount = biggestBid.getAmount() + regularBid;
+        newBid.setAmount(newAmount);
+        newBid.setBotId(bot.getId());
+        bidHistory.put(System.currentTimeMillis(), newBid);
+        setBid(newBid);
+    }
+
+    private void registryWatchers() {
+        watcherService = new ScheduledThreadPoolExecutor(1);
+        watcherService.scheduleAtFixedRate(() -> {
+            if (bots.isEmpty()) {
+                stopAuction();
+            } else {
+                makeAuctionHistoryDump();
+            }
+        }, 5, 1000, TimeUnit.MILLISECONDS);
+    }
+
+    private void makeAuctionHistoryDump() {
+        System.out.println("Start make auction dump at : " + System.currentTimeMillis());
+        Bid subWinner = bidHistory.values().stream().sorted((bid1, bid2) -> {
+            return bid2.getAmount().compareTo(bid1.getAmount());
+        }).findFirst().orElse(null);
+        System.out.println("Subwinner : " + subWinner);
     }
 
     private void stopAuction() {
@@ -130,6 +148,13 @@ public class Auction {
         } finally {
             System.out.println("auction stoped at " + System.currentTimeMillis());
             watcherService.shutdownNow();
+            finalCount();
         }
+    }
+
+    private void finalCount() {
+        System.out.println("Final tests :");
+        System.out.println("Biggest bid amount > 130000 " + (biggestBid.getAmount() > 130000L));
+        System.out.println("Time for auction was : " + (System.currentTimeMillis() - startTime));
     }
 }

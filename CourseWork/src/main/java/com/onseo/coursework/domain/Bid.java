@@ -3,7 +3,7 @@ package com.onseo.coursework.domain;
 public class Bid {
 
     private String botId;
-    private long amount;
+    private Long amount;
 
     public String getBotId() {
         return botId;
@@ -13,11 +13,11 @@ public class Bid {
         this.botId = botId;
     }
 
-    public long getAmount() {
+    public Long getAmount() {
         return amount;
     }
 
-    public void setAmount(long amount) {
+    public void setAmount(Long amount) {
         this.amount = amount;
     }
 
